@@ -3,255 +3,260 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>REDPACK SCANNER V3 - SUPABASE</title>
+    <title>REDPACK PRO - MTY</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        :root {
-            --red: #8a2929; --dark: #212529; --green: #28a745; --blue: #007bff; --gray: #f4f4f4;
-        }
+        :root { --red: #8a2929; --dark: #212529; --green: #28a745; --blue: #007bff; --gray: #f4f4f4; }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--gray); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        header { background: var(--red); color: white; padding: 12px; text-align: center; font-weight: bold; font-size: 1.1em; }
-        
+        header { background: var(--red); color: white; padding: 12px; text-align: center; font-weight: bold; }
         nav { display: flex; background: var(--dark); min-height: 50px; }
-        nav button { flex: 1; padding: 10px; border: none; background: none; color: #adb5bd; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        nav button { flex: 1; padding: 10px; border: none; background: none; color: #adb5bd; font-weight: bold; cursor: pointer; }
         nav button.active { color: white; border-bottom: 4px solid #ffc107; }
-
         .view { display: none; flex-direction: column; padding: 10px; flex: 1; overflow: hidden; box-sizing: border-box; }
         .view.active { display: flex; }
-
+        
+        /* Contenedor de Entrada */
         .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 10px; }
+        .input-group { display: flex; gap: 8px; }
+        #scanner-input { flex: 1; padding: 12px; font-size: 1.2em; border: 2px solid var(--red); border-radius: 8px; outline: none; }
         
-        #scanner-input { 
-            width: 100%; padding: 12px; font-size: 1.4em; text-align: center; 
-            border: 2px solid var(--red); border-radius: 8px; box-sizing: border-box; outline: none;
-        }
-        #scanner-input:focus { border-color: var(--green); box-shadow: 0 0 8px rgba(40, 167, 69, 0.2); }
+        /* Botón de Cámara */
+        .btn-camera { background: var(--blue); border: none; border-radius: 8px; padding: 0 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .btn-camera svg { fill: white; width: 24px; height: 24px; }
 
-        .search-container { margin-bottom: 8px; }
-        #local-search { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        /* Modal del Escáner de Cámara */
+        #camera-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; }
+        #reader { width: 90%; max-width: 400px; border-radius: 10px; overflow: hidden; background: black; }
+        .close-camera { margin-top: 20px; padding: 12px 30px; background: white; border: none; border-radius: 5px; font-weight: bold; color: black; cursor: pointer; }
 
+        /* Estilos de Tabla y Filtros */
         .scroll-area { flex: 1; overflow-y: auto; background: white; border-radius: 5px; border: 1px solid #ddd; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
-        th { background: #f8f9fa; padding: 10px; position: sticky; top: 0; border-bottom: 2px solid #dee2e6; font-size: 0.8em; color: #666; }
-        td { padding: 12px 8px; border-bottom: 1px solid #eee; text-align: center; font-family: monospace; }
-
-        .btn-del { background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; }
-        .btn-edit { background: var(--blue); color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; margin-right: 4px; }
-        
+        table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+        th { background: #f8f9fa; padding: 10px; position: sticky; top: 0; border-bottom: 2px solid #dee2e6; z-index: 10; }
+        td { padding: 12px 5px; border-bottom: 1px solid #eee; text-align: center; }
+        .filter-box { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
         .date-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: white; border-bottom: 1px solid #ddd; font-weight: bold; }
-        .sync-badge { font-size: 0.7em; padding: 2px 6px; border-radius: 10px; background: #e9ecef; color: #666; }
+        .btn-edit { background: var(--blue); color: white; border: none; padding: 6px; border-radius: 4px; margin-right: 5px; }
+        .btn-del { background: #dc3545; color: white; border: none; padding: 6px; border-radius: 4px; }
+        
+        .error-flash { animation: flash 0.3s; }
+        @keyframes flash { 0% { background: white; } 50% { background: #ffcccc; } 100% { background: white; } }
     </style>
 </head>
 <body>
 
-    <header>REDPACK CONTROL DE INYECCIÓN</header>
+<header>SCANNER - REDPACK</header>
 
-    <nav>
-        <button onclick="showView('scanner')" id="btn-scanner" class="active">SCANNER</button>
-        <button onclick="showView('report')" id="btn-report">HISTORIAL NUBE</button>
-    </nav>
+<nav>
+    <button onclick="showView('scanner')" id="btn-scanner" class="active">ESCÁNER</button>
+    <button onclick="showView('report')" id="btn-report">HISTORIAL NUBE</button>
+</nav>
 
-    <div class="date-bar">
-        <button onclick="changeDay(-1)" style="border:none; background:none; font-size:1.2em; cursor:pointer;">◀</button>
-        <span id="date-display">Cargando...</span>
-        <button onclick="changeDay(1)" style="border:none; background:none; font-size:1.2em; cursor:pointer;">▶</button>
-    </div>
+<div class="date-bar">
+    <button onclick="changeDay(-1)">◀</button>
+    <span id="date-display">...</span>
+    <button onclick="changeDay(1)">▶</button>
+</div>
 
-    <div id="scanner" class="view active">
-        <div class="card">
-            <label style="font-size: 0.8em; color: #666;">SERVICIO ACTUAL:</label>
-            <select id="service-select" style="width:100%; padding:10px; margin: 8px 0; font-weight: bold; border-radius: 5px;">
-                <option>Inyección NextDay</option>
-                <option>Inyección SameDay</option>
-                <option>Sobre Dañado</option>
-                <option>Sobre sin Contenido</option>
-                <option>No Manifestado / TBM</option>
-            </select>
-            <input type="text" id="scanner-input" placeholder="ESCANEAR GUÍA..." autocomplete="off">
-        </div>
-
-        <div class="search-container">
-            <input type="text" id="local-search" placeholder="🔍 Buscar guía en la lista de hoy..." oninput="renderUI()">
-        </div>
-
-        <div class="scroll-area">
-            <table>
-                <thead><tr><th>GUÍA</th><th>ACCIONES</th></tr></thead>
-                <tbody id="local-table-body"></tbody>
-            </table>
+<div id="scanner" class="view active">
+    <div class="card" id="input-card">
+        <select id="service-select" style="width:100%; padding:10px; margin-bottom:10px; border-radius:5px; font-weight:bold;">
+            <option>Inyección NextDay</option>
+            <option>Inyección SameDay</option>
+            <option>Sobre Dañado</option>
+            <option>Sobre sin Contenido</option>
+            <option>No Manifestado / TBM</option>
+        </select>
+        <div class="input-group">
+            <input type="text" id="scanner-input" placeholder="ESCRIBE O ESCANEA..." autocomplete="off">
+            <button class="btn-camera" onclick="openCamera()">
+                <svg viewBox="0 0 24 24"><path d="M4 4h3l2-2h6l2 2h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm8 15a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-2a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/></svg>
+            </button>
         </div>
     </div>
-
-    <div id="report" class="view">
-        <div style="margin-bottom: 10px;">
-            <button onclick="fetchData()" style="width:100%; padding:12px; background:var(--dark); color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">☁️ SINCRONIZAR CON SUPABASE</button>
-        </div>
-        <div class="scroll-area">
-            <table>
-                <thead><tr><th>GUÍA</th><th>SERVICIO</th><th>ESTADO</th></tr></thead>
-                <tbody id="global-table-body"></tbody>
-            </table>
-        </div>
+    <div class="scroll-area">
+        <table>
+            <thead><tr><th>GUÍA LOCAL</th><th>SYNC</th></tr></thead>
+            <tbody id="local-table-body"></tbody>
+        </table>
     </div>
+</div>
 
-    <script>
-        // CONFIGURACIÓN SUPABASE
-        const SB_URL = "https://rsgekbibbffbditpdbmc.supabase.co";
-        const SB_KEY = "sb_publishable_WhqIrfjaySNqq4tX8v43ZA_fZaQRfMU";
-        const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
+<div id="report" class="view">
+    <input type="text" id="cloud-search" class="filter-box" placeholder="🔍 Filtrar en tiempo real..." oninput="renderCloudUI()">
+    <div class="scroll-area">
+        <table>
+            <thead><tr><th>GUÍA</th><th>SERVICIO</th><th>ACCIONES</th></tr></thead>
+            <tbody id="global-table-body"></tbody>
+        </table>
+    </div>
+</div>
 
-        let inventory = JSON.parse(localStorage.getItem('rp_inventory_v3')) || {};
-        let viewDate = new Date();
+<div id="camera-modal">
+    <div id="reader"></div>
+    <button class="close-camera" onclick="closeCamera()">CANCELAR</button>
+</div>
 
-        function getFDate(d) {
-            return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
-        }
+<script>
+    const SB_URL = "https://rsgekbibbffbditpdbmc.supabase.co";
+    const SB_KEY = "sb_publishable_WhqIrfjaySNqq4tX8v43ZA_fZaQRfMU";
+    const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
 
-        // Función de Escaneo
-        async function processScan(code) {
-            if(!code) return;
-            const dateKey = getFDate(viewDate);
-            const service = document.getElementById('service-select').value;
+    let inventory = JSON.parse(localStorage.getItem('rp_inventory_v3')) || {};
+    let cloudData = [];
+    let qrScanner;
 
-            // 1. Guardar local inmediato (Velocidad)
-            if(!inventory[dateKey]) inventory[dateKey] = [];
-            
-            // Evitar duplicados locales
-            if(inventory[dateKey].some(i => i.guia === code)) {
-                alert("❌ GUÍA YA ESCANEADA HOY");
-                return;
-            }
+    // --- MANEJO DE FECHA MTY ---
+    function getMTYDate() {
+        const now = new Date();
+        const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+        return new Date(utc + (3600000 * -6));
+    }
+    let viewDate = getMTYDate();
+    const getFDate = (d) => `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
 
-            const newEntry = { guia: code, servicio: service, hora: new Date().toLocaleTimeString(), synced: false };
-            inventory[dateKey].push(newEntry);
-            save();
-            renderUI();
-
-            // 2. Subir a Supabase (Segundo plano)
-            try {
-                const { error } = await supabaseClient
-                    .from('guias')
-                    .insert([{ guia: code, servicio: service, fecha_operacion: dateKey }]);
-                
-                if(!error) {
-                    newEntry.synced = true;
-                    save();
-                    renderUI();
-                }
-            } catch (err) {
-                console.error("Error de red, se queda local.");
-            }
-        }
-
-        async function deleteItem(guia) {
-            if(!confirm(`¿Eliminar guía ${guia}?`)) return;
-            const dateKey = getFDate(viewDate);
-            
-            // Borrar en Supabase
-            await supabaseClient.from('guias').delete().eq('guia', guia).eq('fecha_operacion', dateKey);
-            
-            // Borrar Local
-            if(inventory[dateKey]) {
-                inventory[dateKey] = inventory[dateKey].filter(item => item.guia !== guia);
-            }
-            save();
-            renderUI();
-        }
-
-        async function editItem(oldGuia) {
-            const newGuia = prompt("Editar número de guía:", oldGuia);
-            if(!newGuia || newGuia === oldGuia) return;
-            const dateKey = getFDate(viewDate);
-
-            // Actualizar Supabase
-            await supabaseClient.from('guias')
-                .update({ guia: newGuia })
-                .eq('guia', oldGuia)
-                .eq('fecha_operacion', dateKey);
-            
-            // Actualizar Local
-            if(inventory[dateKey]) {
-                const item = inventory[dateKey].find(i => i.guia === oldGuia);
-                if(item) item.guia = newGuia;
-            }
-            save();
-            renderUI();
-        }
-
-        async function fetchData() {
-            const dateKey = getFDate(viewDate);
-            const { data, error } = await supabaseClient
-                .from('guias')
-                .select('*')
-                .eq('fecha_operacion', dateKey);
-
-            if(!error && data) {
-                inventory[dateKey] = data.map(d => ({ 
-                    guia: d.guia, 
-                    servicio: d.servicio, 
-                    hora: 'Nube', 
-                    synced: true 
-                }));
-                save();
-                renderUI();
-                alert("✅ Datos actualizados desde la nube");
-            }
-        }
-
-        function renderUI() {
-            const dateKey = getFDate(viewDate);
-            document.getElementById('date-display').textContent = dateKey;
-            const search = document.getElementById('local-search').value.toLowerCase();
-            const data = inventory[dateKey] || [];
-
-            // Tabla Scanner (Solo hoy + Filtro)
-            const filtered = data.filter(i => i.guia.toLowerCase().includes(search));
-            document.getElementById('local-table-body').innerHTML = filtered.map(i => `
-                <tr>
-                    <td style="font-weight:bold;">${i.guia}</td>
-                    <td>
-                        <button class="btn-edit" onclick="editItem('${i.guia}')">✎</button>
-                        <button class="btn-del" onclick="deleteItem('${i.guia}')">✕</button>
-                    </td>
-                </tr>`).reverse().join('');
-
-            // Tabla Historial
-            document.getElementById('global-table-body').innerHTML = data.map(i => `
-                <tr>
-                    <td>${i.guia}</td>
-                    <td style="font-size:0.8em; color:#666;">${i.servicio}</td>
-                    <td><span class="sync-badge">${i.synced ? '☁️ OK' : '⏳ Pend'}</span></td>
-                </tr>`).reverse().join('');
-        }
-
-        // Utilidades
-        function save() { localStorage.setItem('rp_inventory_v3', JSON.stringify(inventory)); }
+    // --- FUNCIÓN DE CÁMARA (LIBRERÍA) ---
+    function openCamera() {
+        document.getElementById('camera-modal').style.display = 'flex';
+        qrScanner = new Html5Qrcode("reader");
         
-        function showView(v) {
-            document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
-            document.getElementById(v).classList.add('active');
-            document.getElementById('btn-'+v).classList.add('active');
-            if(v === 'scanner') setTimeout(() => document.getElementById('scanner-input').focus(), 100);
+        const config = { 
+            fps: 15, 
+            qrbox: { width: 280, height: 150 }, // Focus horizontal ideal para códigos de barras
+            aspectRatio: 1.0 
+        };
+
+        qrScanner.start(
+            { facingMode: "environment" }, 
+            config, 
+            (decodedText) => {
+                document.getElementById('scanner-input').value = decodedText;
+                processScan(decodedText.trim());
+                closeCamera();
+                if(navigator.vibrate) navigator.vibrate(100);
+            },
+            (errorMessage) => { /* Silencioso: Error de escaneo continuo */ }
+        ).catch(err => {
+            alert("Error al acceder a la cámara: Asegúrate de usar HTTPS.");
+            closeCamera();
+        });
+    }
+
+    function closeCamera() {
+        if (qrScanner) {
+            qrScanner.stop().then(() => {
+                document.getElementById('camera-modal').style.display = 'none';
+            }).catch(() => {
+                document.getElementById('camera-modal').style.display = 'none';
+            });
+        } else {
+            document.getElementById('camera-modal').style.display = 'none';
+        }
+    }
+
+    // --- PROCESAR ESCANEO ---
+    async function processScan(code) {
+        if(!code) return;
+        const dateKey = getFDate(viewDate);
+        const service = document.getElementById('service-select').value;
+
+        // Validación Dígitos
+        if (service !== "No Manifestado / TBM") {
+            if (!/^\d{8,9}$/.test(code)) {
+                playError(); alert("Error: 8 o 9 números únicamente."); return;
+            }
         }
 
-        function changeDay(n) { viewDate.setDate(viewDate.getDate() + n); renderUI(); }
+        // Duplicados
+        if(!inventory[dateKey]) inventory[dateKey] = [];
+        if(inventory[dateKey].some(i => i.guia === code)) {
+            playError(); alert("Guía repetida hoy."); return;
+        }
 
-        // Evento de teclado
-        document.getElementById('scanner-input').addEventListener('keydown', e => {
-            if(e.key === 'Enter') {
-                processScan(e.target.value.trim());
-                e.target.value = '';
-            }
-        });
+        const newEntry = { guia: code, servicio: service, synced: false };
+        inventory[dateKey].push(newEntry);
+        save(); renderUI();
 
-        // Inicio
-        window.onload = () => {
-            renderUI();
-            document.getElementById('scanner-input').focus();
-            // Opcional: sincronizar al abrir
-            fetchData();
-        };
-    </script>
+        // Nube
+        const { error } = await supabaseClient.from('guias').insert([{ guia: code, servicio: service, fecha_operacion: dateKey }]);
+        if(!error) {
+            newEntry.synced = true;
+            save(); renderUI();
+            if(document.getElementById('report').classList.contains('active')) fetchData();
+        }
+    }
+
+    // --- HISTORIAL NUBE ---
+    async function fetchData() {
+        const dateKey = getFDate(viewDate);
+        const { data, error } = await supabaseClient.from('guias').select('*').eq('fecha_operacion', dateKey).order('created_at', { ascending: false });
+        if(!error) { cloudData = data; renderCloudUI(); }
+    }
+
+    function renderCloudUI() {
+        const q = document.getElementById('cloud-search').value.toLowerCase();
+        const filtered = cloudData.filter(i => i.guia.toLowerCase().includes(q) || i.servicio.toLowerCase().includes(q));
+        document.getElementById('global-table-body').innerHTML = filtered.map(i => `
+            <tr>
+                <td><strong>${i.guia}</strong></td>
+                <td>${i.servicio}</td>
+                <td>
+                    <button class="btn-edit" onclick="editItem('${i.id}', '${i.guia}', '${i.servicio}')">✎</button>
+                    <button class="btn-del" onclick="deleteItem('${i.id}', '${i.guia}')">✕</button>
+                </td>
+            </tr>`).join('');
+    }
+
+    async function editItem(id, oldGuia, oldServ) {
+        const nGuia = prompt("Nueva Guía:", oldGuia); if(!nGuia) return;
+        const nServ = prompt("Nuevo Servicio (Exacto):", oldServ); if(!nServ) return;
+        const { error } = await supabaseClient.from('guias').update({ guia: nGuia, servicio: nServ }).eq('id', id);
+        if(!error) { alert("Actualizado"); fetchData(); }
+    }
+
+    async function deleteItem(id, guia) {
+        if(!confirm(`¿Eliminar guía ${guia}?`)) return;
+        const { error } = await supabaseClient.from('guias').delete().eq('id', id);
+        if(!error) {
+            const dk = getFDate(viewDate);
+            if(inventory[dk]) inventory[dk] = inventory[dk].filter(x => x.guia !== guia);
+            save(); fetchData(); renderUI();
+        }
+    }
+
+    // --- FUNCIONES EXTRA ---
+    function save() { localStorage.setItem('rp_inventory_v3', JSON.stringify(inventory)); }
+    function renderUI() {
+        const dk = getFDate(viewDate);
+        document.getElementById('date-display').textContent = dk;
+        const data = inventory[dk] || [];
+        document.getElementById('local-table-body').innerHTML = data.slice(-8).map(i => `
+            <tr><td>${i.guia}</td><td>${i.synced?'☁️ OK':'⏳'}</td></tr>`).reverse().join('');
+    }
+    function playError() {
+        const c = new AudioContext(); const o = c.createOscillator();
+        o.frequency.value = 130; o.connect(c.destination); o.start(); o.stop(0.3);
+        document.getElementById('input-card').classList.add('error-flash');
+        setTimeout(() => document.getElementById('input-card').classList.remove('error-flash'), 300);
+    }
+    function showView(v) {
+        document.querySelectorAll('.view').forEach(e => e.classList.remove('active'));
+        document.querySelectorAll('nav button').forEach(e => e.classList.remove('active'));
+        document.getElementById(v).classList.add('active');
+        document.getElementById('btn-'+v).classList.add('active');
+        if(v === 'report') fetchData();
+    }
+    function changeDay(n) {
+        let t = new Date(viewDate); t.setDate(viewDate.getDate() + n);
+        if(t > getMTYDate()) return;
+        viewDate = t; renderUI(); fetchData();
+    }
+    document.getElementById('scanner-input').addEventListener('keydown', e => {
+        if(e.key === 'Enter') { processScan(e.target.value.trim()); e.target.value = ''; }
+    });
+
+    window.onload = () => { renderUI(); fetchData(); document.getElementById('scanner-input').focus(); };
+</script>
 </body>
 </html>
