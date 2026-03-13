@@ -3,226 +3,442 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>REDPACK PRO - MTY</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>Scanner Pro Carbon</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        :root { --red: #8a2929; --dark: #212529; --green: #28a745; --blue: #007bff; --gray: #f4f4f4; }
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--gray); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        header { background: var(--red); color: white; padding: 12px; text-align: center; font-weight: bold; }
-        nav { display: flex; background: var(--dark); min-height: 50px; }
-        nav button { flex: 1; padding: 10px; border: none; background: none; color: #adb5bd; font-weight: bold; cursor: pointer; }
-        nav button.active { color: white; border-bottom: 4px solid #ffc107; }
-        .view { display: none; flex-direction: column; padding: 10px; flex: 1; overflow: hidden; box-sizing: border-box; }
+        :root {
+            --primary: #8a2929;
+            --carbon-dark: #121212;
+            --carbon-light: #1e1e1e;
+            --carbon-border: #333333;
+            --accent: #ffc107;
+            --text-main: #e0e0e0;
+            --text-dim: #a0a0a0;
+            --white: #ffffff;
+        }
+
+        body { 
+            font-family: 'Lexend', sans-serif; 
+            margin: 0; 
+            background-color: var(--carbon-dark); 
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            transition: background-color 0.2s ease;
+        }
+
+        /* Indicador Visual de Éxito */
+        body.scan-success { background-color: #064e3b !important; }
+
+        /* Navegación Superior */
+        nav { 
+            display: flex; 
+            background: #000000; 
+            padding: 8px;
+            gap: 8px;
+            border-bottom: 1px solid var(--carbon-border);
+        }
+
+        nav button { 
+            flex: 1; 
+            padding: 12px 5px;
+            background: var(--carbon-light); 
+            border: 1px solid var(--carbon-border); 
+            border-radius: 8px;
+            color: var(--text-dim); 
+            font-family: 'Lexend', sans-serif;
+            font-weight: 600; 
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        nav button.active { 
+            color: var(--white); 
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .container {
+            padding: 12px;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        .view { display: none; flex-direction: column; gap: 12px; }
         .view.active { display: flex; }
-        .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 10px; }
-        .input-group { display: flex; gap: 8px; }
-        #scanner-input { flex: 1; padding: 12px; font-size: 1.2em; border: 2px solid var(--red); border-radius: 8px; outline: none; }
-        .btn-camera { background: var(--blue); border: none; border-radius: 8px; padding: 0 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .btn-camera svg { fill: white; width: 24px; height: 24px; }
-        #camera-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; }
-        #reader { width: 90%; max-width: 400px; border-radius: 10px; overflow: hidden; background: black; }
-        .close-camera { margin-top: 20px; padding: 12px 30px; background: white; border: none; border-radius: 5px; font-weight: bold; color: black; cursor: pointer; }
-        .scroll-area { flex: 1; overflow-y: auto; background: white; border-radius: 5px; border: 1px solid #ddd; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
-        th { background: #f8f9fa; padding: 10px; position: sticky; top: 0; border-bottom: 2px solid #dee2e6; z-index: 10; }
-        td { padding: 12px 5px; border-bottom: 1px solid #eee; text-align: center; }
-        .filter-box { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
-        .date-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: white; border-bottom: 1px solid #ddd; font-weight: bold; }
-        .btn-edit { background: var(--blue); color: white; border: none; padding: 6px; border-radius: 4px; margin-right: 5px; }
-        .btn-del { background: #dc3545; color: white; border: none; padding: 6px; border-radius: 4px; }
-        .error-flash { animation: flash 0.3s; }
-        @keyframes flash { 0% { background: white; } 50% { background: #ffcccc; } 100% { background: white; } }
+
+        .scan-card {
+            background: var(--carbon-light);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid var(--carbon-border);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        select, #scanner-input {
+            background: #000000;
+            color: var(--white);
+            border: 1px solid var(--carbon-border);
+            border-radius: 8px;
+            padding: 14px;
+            font-family: 'Lexend', sans-serif;
+            font-size: 1em;
+            outline: none;
+        }
+
+        #scanner-input:focus { border-color: var(--primary); }
+
+        .btn-cam {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0 20px;
+            font-size: 1.4em;
+            cursor: pointer;
+        }
+
+        .list-section {
+            background: var(--carbon-light);
+            border-radius: 12px;
+            border: 1px solid var(--carbon-border);
+            overflow: hidden;
+        }
+
+        .list-header {
+            background: #252525;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-copy {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-family: 'Lexend', sans-serif;
+            font-weight: 700;
+            font-size: 0.8em;
+            cursor: pointer;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 12px 15px; font-size: 0.7em; text-transform: uppercase; color: var(--text-dim); border-bottom: 1px solid var(--carbon-border); }
+        td { padding: 12px 15px; border-bottom: 1px solid #1a1a1a; font-size: 0.9em; }
+        
+        .guia-text { font-weight: 600; color: var(--white); }
+        .date-text { color: var(--text-dim); font-size: 0.85em; }
+
+        #camera-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 1000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #reader { width: 90%; max-width: 500px; border-radius: 15px; overflow: hidden; border: 2px solid var(--carbon-border); }
+
+        .btn-close-cam {
+            margin-top: 25px;
+            padding: 12px 40px;
+            background: var(--white);
+            border-radius: 25px;
+            border: none;
+            font-weight: bold;
+            font-family: 'Lexend', sans-serif;
+        }
     </style>
 </head>
 <body>
 
-<header>SCANNER - REDPACK (Guias2)</header>
+    <nav>
+        <button onclick="showView('scanner-view')" id="nav-scanner" class="active">
+            <span>ESCÁNER</span>
+        </button>
+        <button onclick="showView('report-view')" id="nav-report">
+            <span>HISTORIAL</span>
+        </button>
+    </nav>
 
-<nav>
-    <button onclick="showView('scanner')" id="btn-scanner" class="active">ESCÁNER</button>
-    <button onclick="showView('report')" id="btn-report">HISTORIAL NUBE</button>
-</nav>
+    <div class="container">
+        <div id="scanner-view" class="view active">
+            <div class="scan-card">
+                <select id="list-select" onchange="selectList(this.value)">
+                    <option value="Inyección NextDay">Inyección NextDay</option>
+                    <option value="Inyección NextDay MP">Inyección NextDay MP</option>
+                    <option value="Inyección SameDay">Inyección SameDay</option>
+                    <option value="Inyección Sameday MP">Inyección Sameday MP</option>
+                    <option value="Sobre Dañado">Sobre Dañado</option>
+                    <option value="Sobre sin Contenido">Sobre sin Contenido</option>
+                    <option value="Mal Entregado">Mal Entregado</option>
+                    <option value="Fuera de Cobertura">Fuera de Cobertura</option>
+                    <option value="Devolución a Origen / 3 Intentos">Devolución a Origen / 3 Intentos</option>
+                    <option value="No Manifestado(Rojo) / TBM">No Manifestado(Rojo) / TBM</option>
+                </select>
 
-<div class="date-bar">
-    <button onclick="changeDay(-1)">◀</button>
-    <span id="date-display">...</span>
-    <button onclick="changeDay(1)">▶</button>
-</div>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="scanner-input" placeholder="Min. 8 caracteres..." autofocus autocomplete="off" style="flex-grow:1;">
+                    <button class="btn-cam" onclick="startCamera()">📷</button>
+                </div>
+            </div>
 
-<div id="scanner" class="view active">
-    <div class="card" id="input-card">
-        <select id="service-select" style="width:100%; padding:10px; margin-bottom:10px; border-radius:5px; font-weight:bold;">
-            <option>Inyección NextDay</option>
-            <option>Inyección SameDay</option>
-            <option>Sobre Dañado</option>
-            <option>Sobre sin Contenido</option>
-            <option>No Manifestado / TBM</option>
-        </select>
-        <div class="input-group">
-            <input type="text" id="scanner-input" placeholder="ESCRIBE O ESCANEA..." autocomplete="off">
-            <button class="btn-camera" onclick="openCamera()">
-                <svg viewBox="0 0 24 24"><path d="M4 4h3l2-2h6l2 2h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm8 15a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0-2a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/></svg>
-            </button>
+            <div class="list-section">
+                <div class="list-header">
+                    <span id="list-title" style="font-weight:600; font-size:0.9em;">Lista Actual</span>
+                    <span id="count-per-list" style="background:var(--primary); padding:2px 8px; border-radius:10px; font-size:0.8em;">0</span>
+                </div>
+                <table>
+                    <tbody id="scanned-list-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="report-view" class="view">
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 5px;">
+                <button class="btn-copy" onclick="copyToSheets()">📋 COPIAR PARA SHEETS</button>
+            </div>
+            <div class="list-section">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Guía</th>
+                            <th>Servicio</th>
+                        </tr>
+                    </thead>
+                    <tbody id="report-table-body"></tbody>
+                </table>
+            </div>
+            <button onclick="resetAllData()" style="padding:15px; background:transparent; color:#8a2929; border:1px solid #8a2929; border-radius:10px; font-weight:bold; margin-top:20px; font-family:'Lexend';">LIMPIAR TODO</button>
         </div>
     </div>
-    <div class="scroll-area">
-        <table>
-            <thead><tr><th>GUÍA LOCAL</th><th>SYNC</th></tr></thead>
-            <tbody id="local-table-body"></tbody>
-        </table>
+
+    <div id="camera-modal">
+        <div id="reader"></div>
+        <button class="btn-close-cam" onclick="stopCamera()">CERRAR</button>
     </div>
-</div>
 
-<div id="report" class="view">
-    <input type="text" id="cloud-search" class="filter-box" placeholder="🔍 Filtrar en tiempo real..." oninput="renderCloudUI()">
-    <div class="scroll-area">
-        <table>
-            <thead><tr><th>GUÍA</th><th>TIPO</th><th>ACCIONES</th></tr></thead>
-            <tbody id="global-table-body"></tbody>
-        </table>
-    </div>
-</div>
+    <script>
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyHoN08r8jxH4eIF4FASOb2IUrh6f0ss4qCI9xSV7rv1XsDnB5ygmWtvNXYT1qhXt7kkg/exec";
+        let inventory = JSON.parse(localStorage.getItem('redpack_v5')) || {}; 
+        let currentListName = localStorage.getItem('redpack_last_list') || 'Inyección NextDay';
+        let html5QrCode;
+        let globalBuffer = "";
+        let lastKeyTime = Date.now();
 
-<div id="camera-modal">
-    <div id="reader"></div>
-    <button class="close-camera" onclick="closeCamera()">CANCELAR</button>
-</div>
-
-<script>
-    const SB_URL = "https://rsgekbibbffbditpdbmc.supabase.co";
-    const SB_KEY = "sb_publishable_WhqIrfjaySNqq4tX8v43ZA_fZaQRfMU";
-    const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
-
-    let inventory = JSON.parse(localStorage.getItem('rp_inventory_v3')) || {};
-    let cloudData = [];
-    let qrScanner;
-
-    function getMTYDate() {
-        const now = new Date();
-        const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-        return new Date(utc + (3600000 * -6));
-    }
-    let viewDate = getMTYDate();
-    const getFDate = (d) => `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
-
-    function openCamera() {
-        document.getElementById('camera-modal').style.display = 'flex';
-        qrScanner = new Html5Qrcode("reader");
-        const config = { fps: 15, qrbox: { width: 280, height: 150 }, aspectRatio: 1.0 };
-        qrScanner.start({ facingMode: "environment" }, config, (decodedText) => {
-            document.getElementById('scanner-input').value = decodedText;
-            processScan(decodedText.trim());
-            closeCamera();
-        }).catch(() => closeCamera());
-    }
-
-    function closeCamera() {
-        if (qrScanner) { qrScanner.stop().finally(() => document.getElementById('camera-modal').style.display = 'none'); }
-        else { document.getElementById('camera-modal').style.display = 'none'; }
-    }
-
-    async function processScan(code) {
-        if(!code) return;
-        const dateKey = getFDate(viewDate);
-        const service = document.getElementById('service-select').value;
-
-        if (service !== "No Manifestado / TBM") {
-            if (!/^\d{8,9}$/.test(code)) { playError(); alert("Error: 8 o 9 números únicamente."); return; }
+        function getFormatDate() {
+            const d = new Date();
+            return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
         }
 
-        if(!inventory[dateKey]) inventory[dateKey] = [];
-        if(inventory[dateKey].some(i => i.guia === code)) { playError(); alert("Guía repetida hoy."); return; }
-
-        const newEntry = { guia: code, servicio: service, synced: false };
-        inventory[dateKey].push(newEntry);
-        save(); renderUI();
-
-        // INSERCIÓN EN TABLA Guias2 con columnas Fecha, Guia, Tipo
-        const { error } = await supabaseClient.from('Guias2').insert([{ 
-            Guia: code, 
-            Tipo: service, 
-            Fecha: dateKey 
-        }]);
-
-        if(!error) {
-            newEntry.synced = true;
-            save(); renderUI();
-            if(document.getElementById('report').classList.contains('active')) fetchData();
-        } else {
-            console.error("Error Supabase:", error.message);
+        function successFeedback() {
+            const context = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = context.createOscillator();
+            const gain = context.createGain();
+            osc.frequency.setValueAtTime(880, context.currentTime);
+            gain.gain.setValueAtTime(0.05, context.currentTime);
+            osc.connect(gain); gain.connect(context.destination);
+            osc.start(); osc.stop(context.currentTime + 0.1);
+            if (navigator.vibrate) navigator.vibrate(50);
+            document.body.classList.add('scan-success');
+            setTimeout(() => document.body.classList.remove('scan-success'), 250);
         }
-    }
 
-    async function fetchData() {
-        const dateKey = getFDate(viewDate);
-        // Consulta a Guias2
-        const { data, error } = await supabaseClient.from('Guias2').select('*').eq('Fecha', dateKey).order('created_at', { ascending: false });
-        if(!error) { cloudData = data; renderCloudUI(); }
-    }
+        // Interceptación Handheld Global
+        document.addEventListener('keydown', (e) => {
+            const currentTime = Date.now();
+            if (e.target.tagName !== 'INPUT' || (currentTime - lastKeyTime < 40)) {
+                if (e.key === 'Enter') {
+                    if (globalBuffer.length >= 8) { // Validación de longitud mínima
+                        processScan(globalBuffer.trim());
+                    }
+                    globalBuffer = "";
+                } else if (e.key.length === 1) {
+                    globalBuffer += e.key;
+                }
+            }
+            lastKeyTime = currentTime;
+        });
 
-    function renderCloudUI() {
-        const q = document.getElementById('cloud-search').value.toLowerCase();
-        const filtered = cloudData.filter(i => (i.Guia || '').toLowerCase().includes(q) || (i.Tipo || '').toLowerCase().includes(q));
-        document.getElementById('global-table-body').innerHTML = filtered.map(i => `
-            <tr>
-                <td><strong>${i.Guia}</strong></td>
-                <td>${i.Tipo}</td>
-                <td>
-                    <button class="btn-edit" onclick="editItem('${i.id}', '${i.Guia}', '${i.Tipo}')">✎</button>
-                    <button class="btn-del" onclick="deleteItem('${i.id}', '${i.Guia}')">✕</button>
-                </td>
-            </tr>`).join('');
-    }
+        async function processScan(code) {
+            const dateKey = getFormatDate();
+            if (!code || code.length < 8) return; // Doble validación de seguridad
 
-    async function editItem(id, oldGuia, oldServ) {
-        const nGuia = prompt("Nueva Guía:", oldGuia); if(!nGuia) return;
-        const nServ = prompt("Nuevo Servicio (Exacto):", oldServ); if(!nServ) return;
-        const { error } = await supabaseClient.from('Guias2').update({ Guia: nGuia, Tipo: nServ }).eq('id', id);
-        if(!error) { alert("Actualizado"); fetchData(); }
-    }
+            // Filtros de servicio
+            if (currentListName === "No Manifestado(Rojo) / TBM") {
+                if (!/^[a-zA-Z0-9]+$/.test(code)) return;
+            } else {
+                if (!/^\d+$/.test(code)) return;
+            }
+            
+            // Duplicados
+            if (!inventory[dateKey]) inventory[dateKey] = {};
+            for (let L in inventory[dateKey]) {
+                if (inventory[dateKey][L].includes(code)) {
+                    alert(`Duplicado en ${L}`);
+                    return;
+                }
+            }
 
-    async function deleteItem(id, guia) {
-        if(!confirm(`¿Eliminar guía ${guia}?`)) return;
-        const { error } = await supabaseClient.from('Guias2').delete().eq('id', id);
-        if(!error) {
-            const dk = getFDate(viewDate);
-            if(inventory[dk]) inventory[dk] = inventory[dk].filter(x => x.guia !== guia);
-            save(); fetchData(); renderUI();
+            if (!inventory[dateKey][currentListName]) inventory[dateKey][currentListName] = [];
+            inventory[dateKey][currentListName].push(code);
+            localStorage.setItem('redpack_v5', JSON.stringify(inventory));
+            
+            successFeedback();
+            updateUI();
+
+            // Sincronización automática
+            fetch(WEB_APP_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ fecha: dateKey, guia: code, servicio: currentListName })
+            });
+
+            document.getElementById('scanner-input').value = "";
+            document.getElementById('scanner-input').focus();
         }
-    }
 
-    function save() { localStorage.setItem('rp_inventory_v3', JSON.stringify(inventory)); }
-    function renderUI() {
-        const dk = getFDate(viewDate);
-        document.getElementById('date-display').textContent = dk;
-        const data = inventory[dk] || [];
-        document.getElementById('local-table-body').innerHTML = data.slice(-8).map(i => `
-            <tr><td>${i.guia}</td><td>${i.synced?'☁️ OK':'⏳'}</td></tr>`).reverse().join('');
-    }
-    function playError() {
-        const c = new AudioContext(); const o = c.createOscillator();
-        o.frequency.value = 130; o.connect(c.destination); o.start(); o.stop(0.3);
-        document.getElementById('input-card').classList.add('error-flash');
-        setTimeout(() => document.getElementById('input-card').classList.remove('error-flash'), 300);
-    }
-    function showView(v) {
-        document.querySelectorAll('.view').forEach(e => e.classList.remove('active'));
-        document.querySelectorAll('nav button').forEach(e => e.classList.remove('active'));
-        document.getElementById(v).classList.add('active');
-        document.getElementById('btn-'+v).classList.add('active');
-        if(v === 'report') fetchData();
-    }
-    function changeDay(n) {
-        let t = new Date(viewDate); t.setDate(viewDate.getDate() + n);
-        if(t > getMTYDate()) return;
-        viewDate = t; renderUI(); fetchData();
-    }
-    document.getElementById('scanner-input').addEventListener('keydown', e => {
-        if(e.key === 'Enter') { processScan(e.target.value.trim()); e.target.value = ''; }
-    });
+        function updateUI() {
+            const dateKey = getFormatDate();
+            const dayData = inventory[dateKey] || {};
+            const list = dayData[currentListName] || [];
+            
+            document.getElementById('list-title').textContent = currentListName;
+            document.getElementById('count-per-list').textContent = list.length;
+            
+            const rows = list.slice(-10).map((item) => `
+                <tr>
+                    <td><span class="guia-text">${item}</span></td>
+                    <td style="text-align:right"><button onclick="deleteItem('${item}')" style="background:none; border:none; color:#8a2929; cursor:pointer; font-weight:bold;">✕</button></td>
+                </tr>`).reverse().join('');
+            
+            document.getElementById('scanned-list-body').innerHTML = rows;
+            renderReport();
+        }
 
-    window.onload = () => { renderUI(); fetchData(); document.getElementById('scanner-input').focus(); };
-</script>
+        function renderReport() {
+            const dateKey = getFormatDate();
+            const dayData = inventory[dateKey] || {};
+            let rows = [];
+            for (let L in dayData) {
+                dayData[L].forEach(code => {
+                    rows.push(`
+                        <tr>
+                            <td class="date-text">${dateKey}</td>
+                            <td class="guia-text">${code}</td>
+                            <td><span style="font-size:0.8em; color:var(--text-dim)">${L}</span></td>
+                        </tr>`);
+                });
+            }
+            document.getElementById('report-table-body').innerHTML = rows.reverse().join('');
+        }
+
+        function copyToSheets() {
+            const dateKey = getFormatDate();
+            const dayData = inventory[dateKey] || {};
+            let tsvContent = ""; 
+
+            for (let L in dayData) {
+                dayData[L].forEach(code => {
+                    tsvContent += `${dateKey}\t${code}\t${L}\n`;
+                });
+            }
+
+            if (!tsvContent) {
+                alert("No hay datos hoy.");
+                return;
+            }
+
+            navigator.clipboard.writeText(tsvContent).then(() => {
+                alert("¡Datos de hoy copiados!");
+            });
+        }
+
+        function startCamera() {
+            document.getElementById('camera-modal').style.display = 'flex';
+            html5QrCode = new Html5Qrcode("reader");
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                { fps: 20, qrbox: { width: 250, height: 150 } },
+                (text) => { 
+                    if (text.length >= 8) {
+                        processScan(text); 
+                        stopCamera(); 
+                    }
+                }
+            );
+        }
+
+        function stopCamera() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    document.getElementById('camera-modal').style.display = 'none';
+                    document.getElementById('scanner-input').focus();
+                });
+            }
+        }
+
+        function showView(id) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.getElementById('nav-' + id.split('-')[0]).classList.add('active');
+            if(id === 'scanner-view') document.getElementById('scanner-input').focus();
+        }
+
+        function deleteItem(code) {
+            const dateKey = getFormatDate();
+            if (inventory[dateKey]) {
+                for (let L in inventory[dateKey]) {
+                    inventory[dateKey][L] = inventory[dateKey][L].filter(c => c !== code);
+                }
+            }
+            localStorage.setItem('redpack_v5', JSON.stringify(inventory));
+            updateUI();
+        }
+
+        function resetAllData() {
+            if(confirm("¿Borrar todo?")) {
+                inventory = {};
+                localStorage.setItem('redpack_v5', JSON.stringify(inventory));
+                updateUI();
+            }
+        }
+
+        function selectList(name) {
+            currentListName = name;
+            localStorage.setItem('redpack_last_list', name);
+            updateUI();
+            document.getElementById('scanner-input').focus();
+        }
+
+        document.getElementById('scanner-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { 
+                const val = e.target.value.trim();
+                if (val.length >= 8) processScan(val);
+                e.target.value = ''; 
+            }
+        });
+
+        window.onload = () => {
+            updateUI();
+            setTimeout(() => document.getElementById('scanner-input').focus(), 500);
+        };
+    </script>
 </body>
 </html>
