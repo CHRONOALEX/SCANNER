@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner Pro Carbon</title>
+    <title>SCANNER V3</title>
     <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -16,6 +16,9 @@
             --text-main: #e0e0e0;
             --text-dim: #a0a0a0;
             --white: #ffffff;
+            /* Colores de Proveedores */
+            --rombo-color: #00d4ff; /* Celeste */
+            --qp-color: #ff4444;    /* Rojo */
         }
 
         body { 
@@ -26,13 +29,10 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
-            transition: background-color 0.2s ease;
         }
 
-        /* Indicador Visual de Éxito */
         body.scan-success { background-color: #064e3b !important; }
 
-        /* Navegación Superior */
         nav { 
             display: flex; 
             background: #000000; 
@@ -51,10 +51,6 @@
             font-family: 'Lexend', sans-serif;
             font-weight: 600; 
             cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
         }
 
         nav button.active { 
@@ -63,12 +59,7 @@
             border-color: var(--primary);
         }
 
-        .container {
-            padding: 12px;
-            flex-grow: 1;
-            overflow-y: auto;
-        }
-
+        .container { padding: 12px; flex-grow: 1; overflow-y: auto; }
         .view { display: none; flex-direction: column; gap: 12px; }
         .view.active { display: flex; }
 
@@ -82,6 +73,11 @@
             gap: 12px;
         }
 
+        .select-group {
+            display: flex;
+            gap: 8px;
+        }
+
         select, #scanner-input {
             background: #000000;
             color: var(--white);
@@ -91,7 +87,12 @@
             font-family: 'Lexend', sans-serif;
             font-size: 1em;
             outline: none;
+            flex: 1;
         }
+
+        /* Estilo específico para las opciones del desplegable */
+        #prov-select option[value="Rombo"] { color: var(--rombo-color); }
+        #prov-select option[value="QP"] { color: var(--qp-color); }
 
         #scanner-input:focus { border-color: var(--primary); }
 
@@ -139,6 +140,17 @@
         .guia-text { font-weight: 600; color: var(--white); }
         .date-text { color: var(--text-dim); font-size: 0.85em; }
 
+        /* Badges de Proveedor */
+        .badge-prov { 
+            font-size: 0.75em; 
+            padding: 2px 8px; 
+            border-radius: 4px; 
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .badge-rombo { background: rgba(0, 212, 255, 0.2); color: var(--rombo-color); border: 1px solid var(--rombo-color); }
+        .badge-qp { background: rgba(255, 68, 68, 0.2); color: var(--qp-color); border: 1px solid var(--qp-color); }
+
         #camera-modal {
             display: none;
             position: fixed;
@@ -166,32 +178,35 @@
 <body>
 
     <nav>
-        <button onclick="showView('scanner-view')" id="nav-scanner" class="active">
-            <span>ESCÁNER</span>
-        </button>
-        <button onclick="showView('report-view')" id="nav-report">
-            <span>HISTORIAL</span>
-        </button>
+        <button onclick="showView('scanner-view')" id="nav-scanner" class="active">ESCÁNER</button>
+        <button onclick="showView('report-view')" id="nav-report">HISTORIAL</button>
     </nav>
 
     <div class="container">
         <div id="scanner-view" class="view active">
             <div class="scan-card">
-                <select id="list-select" onchange="selectList(this.value)">
-                    <option value="Inyección NextDay">Inyección NextDay</option>
-                    <option value="Inyección NextDay MP">Inyección NextDay MP</option>
-                    <option value="Inyección SameDay">Inyección SameDay</option>
-                    <option value="Inyección Sameday MP">Inyección Sameday MP</option>
-                    <option value="Sobre Dañado">Sobre Dañado</option>
-                    <option value="Sobre sin Contenido">Sobre sin Contenido</option>
-                    <option value="Mal Entregado">Mal Entregado</option>
-                    <option value="Fuera de Cobertura">Fuera de Cobertura</option>
-                    <option value="Devolución a Origen / 3 Intentos">Devolución a Origen / 3 Intentos</option>
-                    <option value="No Manifestado(Rojo) / TBM">No Manifestado(Rojo) / TBM</option>
-                </select>
+                <div class="select-group">
+                    <select id="prov-select" onchange="selectProv(this.value)">
+                        <option value="Rombo">Rombo</option>
+                        <option value="QP">QP</option>
+                    </select>
+
+                    <select id="list-select" onchange="selectList(this.value)">
+                        <option value="Inyección NextDay">Inyección NextDay</option>
+                        <option value="Inyección NextDay MP">Inyección NextDay MP</option>
+                        <option value="Inyección SameDay">Inyección SameDay</option>
+                        <option value="Inyección Sameday MP">Inyección Sameday MP</option>
+                        <option value="Sobre Dañado">Sobre Dañado</option>
+                        <option value="Sobre sin Contenido">Sobre sin Contenido</option>
+                        <option value="Mal Entregado">Mal Entregado</option>
+                        <option value="Fuera de Cobertura">Fuera de Cobertura</option>
+                        <option value="Devolución a Origen / 3 Intentos">Devolución a Origen / 3 Intentos</option>
+                        <option value="No Manifestado(Rojo) / TBM">No Manifestado(Rojo) / TBM</option>
+                    </select>
+                </div>
 
                 <div style="display: flex; gap: 8px;">
-                    <input type="text" id="scanner-input" placeholder="Min. 8 caracteres..." autofocus autocomplete="off" style="flex-grow:1;">
+                    <input type="text" id="scanner-input" placeholder="Escanear guía..." autofocus autocomplete="off" style="flex-grow:1;">
                     <button class="btn-cam" onclick="startCamera()">📷</button>
                 </div>
             </div>
@@ -218,6 +233,7 @@
                             <th>Fecha</th>
                             <th>Guía</th>
                             <th>Servicio</th>
+                            <th>Proveedor</th>
                         </tr>
                     </thead>
                     <tbody id="report-table-body"></tbody>
@@ -233,12 +249,11 @@
     </div>
 
     <script>
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyHoN08r8jxH4eIF4FASOb2IUrh6f0ss4qCI9xSV7rv1XsDnB5ygmWtvNXYT1qhXt7kkg/exec";
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwOQJJ6bVevCWg58OhjCjJpjbgn-0LHyvOPM84qDdcHLfuM3Gq9Mcmk-3C-ISt2FE8zyw/exec";
         let inventory = JSON.parse(localStorage.getItem('redpack_v5')) || {}; 
         let currentListName = localStorage.getItem('redpack_last_list') || 'Inyección NextDay';
+        let currentProv = localStorage.getItem('redpack_last_prov') || 'Rombo';
         let html5QrCode;
-        let globalBuffer = "";
-        let lastKeyTime = Date.now();
 
         function getFormatDate() {
             const d = new Date();
@@ -253,60 +268,41 @@
             gain.gain.setValueAtTime(0.05, context.currentTime);
             osc.connect(gain); gain.connect(context.destination);
             osc.start(); osc.stop(context.currentTime + 0.1);
-            if (navigator.vibrate) navigator.vibrate(50);
             document.body.classList.add('scan-success');
             setTimeout(() => document.body.classList.remove('scan-success'), 250);
         }
 
-        // Interceptación Handheld Global
-        document.addEventListener('keydown', (e) => {
-            const currentTime = Date.now();
-            if (e.target.tagName !== 'INPUT' || (currentTime - lastKeyTime < 40)) {
-                if (e.key === 'Enter') {
-                    if (globalBuffer.length >= 8) { // Validación de longitud mínima
-                        processScan(globalBuffer.trim());
-                    }
-                    globalBuffer = "";
-                } else if (e.key.length === 1) {
-                    globalBuffer += e.key;
-                }
-            }
-            lastKeyTime = currentTime;
-        });
-
         async function processScan(code) {
             const dateKey = getFormatDate();
-            if (!code || code.length < 8) return; // Doble validación de seguridad
+            if (!code || code.length < 8) return;
 
-            // Filtros de servicio
-            if (currentListName === "No Manifestado(Rojo) / TBM") {
-                if (!/^[a-zA-Z0-9]+$/.test(code)) return;
-            } else {
-                if (!/^\d+$/.test(code)) return;
-            }
-            
-            // Duplicados
             if (!inventory[dateKey]) inventory[dateKey] = {};
+            
             for (let L in inventory[dateKey]) {
-                if (inventory[dateKey][L].includes(code)) {
+                if (inventory[dateKey][L].some(item => item.guia === code)) {
                     alert(`Duplicado en ${L}`);
                     return;
                 }
             }
 
             if (!inventory[dateKey][currentListName]) inventory[dateKey][currentListName] = [];
-            inventory[dateKey][currentListName].push(code);
+            
+            inventory[dateKey][currentListName].push({ guia: code, prov: currentProv });
             localStorage.setItem('redpack_v5', JSON.stringify(inventory));
             
             successFeedback();
             updateUI();
 
-            // Sincronización automática
             fetch(WEB_APP_URL, {
                 method: "POST",
                 mode: "no-cors",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ fecha: dateKey, guia: code, servicio: currentListName })
+                body: JSON.stringify({ 
+                    fecha: dateKey, 
+                    guia: code, 
+                    servicio: currentListName,
+                    proveedor: currentProv
+                })
             });
 
             document.getElementById('scanner-input').value = "";
@@ -320,12 +316,16 @@
             
             document.getElementById('list-title').textContent = currentListName;
             document.getElementById('count-per-list').textContent = list.length;
+            document.getElementById('prov-select').value = currentProv;
+            document.getElementById('list-select').value = currentListName;
             
-            const rows = list.slice(-10).map((item) => `
+            const rows = list.slice(-10).map((item) => {
+                const badgeClass = item.prov === "Rombo" ? "badge-rombo" : "badge-qp";
+                return `
                 <tr>
-                    <td><span class="guia-text">${item}</span></td>
-                    <td style="text-align:right"><button onclick="deleteItem('${item}')" style="background:none; border:none; color:#8a2929; cursor:pointer; font-weight:bold;">✕</button></td>
-                </tr>`).reverse().join('');
+                    <td><span class="guia-text">${item.guia}</span> <span class="badge-prov ${badgeClass}">${item.prov}</span></td>
+                    <td style="text-align:right"><button onclick="deleteItem('${item.guia}')" style="background:none; border:none; color:#8a2929; cursor:pointer; font-weight:bold;">✕</button></td>
+                </tr>`}).reverse().join('');
             
             document.getElementById('scanned-list-body').innerHTML = rows;
             renderReport();
@@ -336,12 +336,14 @@
             const dayData = inventory[dateKey] || {};
             let rows = [];
             for (let L in dayData) {
-                dayData[L].forEach(code => {
+                dayData[L].forEach(item => {
+                    const badgeClass = item.prov === "Rombo" ? "badge-rombo" : "badge-qp";
                     rows.push(`
                         <tr>
                             <td class="date-text">${dateKey}</td>
-                            <td class="guia-text">${code}</td>
+                            <td class="guia-text">${item.guia}</td>
                             <td><span style="font-size:0.8em; color:var(--text-dim)">${L}</span></td>
+                            <td><span class="badge-prov ${badgeClass}">${item.prov}</span></td>
                         </tr>`);
                 });
             }
@@ -354,19 +356,40 @@
             let tsvContent = ""; 
 
             for (let L in dayData) {
-                dayData[L].forEach(code => {
-                    tsvContent += `${dateKey}\t${code}\t${L}\n`;
+                dayData[L].forEach(item => {
+                    tsvContent += `${dateKey}\t${item.guia}\t${L}\t${item.prov}\n`;
                 });
             }
 
-            if (!tsvContent) {
-                alert("No hay datos hoy.");
-                return;
-            }
+            if (!tsvContent) { alert("No hay datos hoy."); return; }
 
             navigator.clipboard.writeText(tsvContent).then(() => {
-                alert("¡Datos de hoy copiados!");
+                alert("¡Datos (4 columnas) copiados!");
             });
+        }
+
+        function selectProv(name) {
+            currentProv = name;
+            localStorage.setItem('redpack_last_prov', name);
+            document.getElementById('scanner-input').focus();
+        }
+
+        function selectList(name) {
+            currentListName = name;
+            localStorage.setItem('redpack_last_list', name);
+            updateUI();
+            document.getElementById('scanner-input').focus();
+        }
+
+        function deleteItem(code) {
+            const dateKey = getFormatDate();
+            if (inventory[dateKey]) {
+                for (let L in inventory[dateKey]) {
+                    inventory[dateKey][L] = inventory[dateKey][L].filter(i => i.guia !== code);
+                }
+            }
+            localStorage.setItem('redpack_v5', JSON.stringify(inventory));
+            updateUI();
         }
 
         function startCamera() {
@@ -401,30 +424,12 @@
             if(id === 'scanner-view') document.getElementById('scanner-input').focus();
         }
 
-        function deleteItem(code) {
-            const dateKey = getFormatDate();
-            if (inventory[dateKey]) {
-                for (let L in inventory[dateKey]) {
-                    inventory[dateKey][L] = inventory[dateKey][L].filter(c => c !== code);
-                }
-            }
-            localStorage.setItem('redpack_v5', JSON.stringify(inventory));
-            updateUI();
-        }
-
         function resetAllData() {
             if(confirm("¿Borrar todo?")) {
                 inventory = {};
                 localStorage.setItem('redpack_v5', JSON.stringify(inventory));
                 updateUI();
             }
-        }
-
-        function selectList(name) {
-            currentListName = name;
-            localStorage.setItem('redpack_last_list', name);
-            updateUI();
-            document.getElementById('scanner-input').focus();
         }
 
         document.getElementById('scanner-input').addEventListener('keydown', (e) => {
