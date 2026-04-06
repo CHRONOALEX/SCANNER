@@ -18,6 +18,7 @@
             --white: #ffffff;
             --rombo-color: #00d4ff;
             --qp-color: #ff4444;
+            --emissary-color: #a855f7; /* Morado para Emissary */
         }
 
         body { 
@@ -28,7 +29,7 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
-            overflow: hidden; /* Evita rebotes en handheld */
+            overflow: hidden;
         }
 
         body.scan-success { background-color: #064e3b !important; }
@@ -65,7 +66,6 @@
         .view { display: none; flex-direction: column; gap: 8px; }
         .view.active { display: flex; }
 
-        /* Ajuste de los selectores para Handheld */
         .scan-card {
             background: var(--carbon-light);
             padding: 10px;
@@ -86,14 +86,14 @@
             color: var(--white);
             border: 1px solid var(--carbon-border);
             border-radius: 6px;
-            padding: 8px 4px; /* Más compacto */
+            padding: 8px 4px;
             font-family: 'Lexend', sans-serif;
-            font-size: 0.85rem; /* Fuente más pequeña para que quepa el texto */
+            font-size: 0.85rem;
             outline: none;
         }
 
-        #prov-select { flex: 0 0 30%; } /* El proveedor ocupa menos espacio */
-        #list-select { flex: 1; }        /* La lista ocupa el resto */
+        #prov-select { flex: 0 0 35%; } 
+        #list-select { flex: 1; }
 
         #scanner-input {
             background: #000000;
@@ -117,7 +117,7 @@
             border-radius: 8px;
             border: 1px solid var(--carbon-border);
             overflow: hidden;
-            max-height: 50vh; /* Limita la tabla para ver siempre el input */
+            max-height: 50vh;
             overflow-y: auto;
         }
 
@@ -138,6 +138,11 @@
         .guia-text { font-weight: 600; color: var(--white); }
         .badge-prov { font-size: 0.7em; padding: 1px 6px; border-radius: 3px; font-weight: bold; }
         
+        /* Estilos específicos por proveedor */
+        .badge-rombo { color: var(--rombo-color); }
+        .badge-qp { color: var(--qp-color); }
+        .badge-emissary { color: var(--white); background: var(--emissary-color); }
+
         #error-toast {
             display: none; position: fixed; top: 15%; left: 50%; transform: translateX(-50%);
             background: #ff4444; color: white; padding: 10px 20px; border-radius: 20px;
@@ -168,6 +173,7 @@
                     <select id="prov-select" onchange="selectProv(this.value)">
                         <option value="Rombo">Rombo</option>
                         <option value="QP">QP</option>
+                        <option value="Emissary">Emissary</option>
                     </select>
 
                     <select id="list-select" onchange="selectList(this.value)">
@@ -235,9 +241,13 @@
                 gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
                 osc.start(); osc.stop(audioCtx.currentTime + 0.1);
             } else {
-                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+                // Sonido de error más potente y largo para Handheld
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(100, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.4);
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.4);
             }
         }
 
@@ -254,6 +264,8 @@
                 }, 1500);
             } else {
                 document.body.classList.add('scan-success');
+                // Vibración para éxito (si el hardware lo permite)
+                if (navigator.vibrate) navigator.vibrate(60);
                 playBeep('success');
                 setTimeout(() => document.body.classList.remove('scan-success'), 200);
             }
@@ -263,7 +275,6 @@
             code = code.trim();
             if (!code) return;
 
-            // Filtro Numérico para Inyección
             if (currentListName.toLowerCase().includes("inyección")) {
                 if (!/^\d+$/.test(code) || code.length < 8 || code.length > 10) {
                     showStatus(true, "ERR: SOLO 8-10 NÚMEROS");
@@ -294,7 +305,6 @@
             });
         }
 
-        // Global keydown para handheld (captura laser sin foco)
         document.addEventListener('keydown', (e) => {
             const input = document.getElementById('scanner-input');
             if (document.activeElement.tagName !== 'SELECT' && document.getElementById('scanner-view').classList.contains('active')) {
@@ -318,11 +328,17 @@
             document.getElementById('prov-select').value = currentProv;
             document.getElementById('list-select').value = currentListName;
             
-            document.getElementById('scanned-list-body').innerHTML = list.slice(-8).map(i => `
+            document.getElementById('scanned-list-body').innerHTML = list.slice(-8).map(i => {
+                let badgeClass = 'badge-rombo';
+                if(i.prov === 'QP') badgeClass = 'badge-qp';
+                if(i.prov === 'Emissary') badgeClass = 'badge-emissary';
+
+                return `
                 <tr>
-                    <td><span class="guia-text">${i.guia}</span> <span class="badge-prov ${i.prov === 'Rombo' ? 'badge-rombo' : 'badge-qp'}" style="color:${i.prov === 'Rombo' ? 'var(--rombo-color)' : 'var(--qp-color)'}">${i.prov}</span></td>
+                    <td><span class="guia-text">${i.guia}</span> <span class="badge-prov ${badgeClass}">${i.prov}</span></td>
                     <td style="text-align:right"><button onclick="deleteItem('${i.guia}')" style="color:#8a2929; background:none; border:none; font-weight:bold;">✕</button></td>
-                </tr>`).reverse().join('');
+                </tr>`;
+            }).reverse().join('');
             
             renderReport();
         }
