@@ -308,6 +308,7 @@
                         <option value="NO MANIFESTADO">NO MANIFESTADO</option>
                         <option value="MAL PUNTEADO">MAL PUNTEADO</option>
                         <option value="ANDEN INCORRECTO">ANDEN INCORRECTO</option>
+                        <option value="REINTENTO">REINTENTO</option>
                         <option value="SIN CONTENIDO">SIN CONTENIDO</option>
                         <option value="PAQUETE DAÑADO">PAQUETE DAÑADO</option>
                         <option value="EXCESO DE DIMENSIONES">EXCESO DE DIMENSIONES</option>
@@ -396,7 +397,7 @@
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwe_BKXr_8RhH2TT6vPg-WJGu8ZJpa0-xrDBvFSYba65b82cYzDqFuNwwqLUiCw0HTqDQ/exec";
         
         const categoriasPorAccion = {
-            "INYECCIÓN": ["NO MANIFESTADO", "MAL PUNTEADO", "ANDEN INCORRECTO"],
+            "INYECCIÓN": ["NO MANIFESTADO", "MAL PUNTEADO", "ANDEN INCORRECTO", "REINTENTO"],
             "DEVOLUCIÓN A ORIGEN": ["NO MANIFESTADO", "MAL PUNTEADO", "SIN CONTENIDO", "PAQUETE DAÑADO", "EXCESO DE DIMENSIONES", "FUERA DE COBERTURA", "3 INTENTOS", "MAL ENTREGADO"]
         };
 
@@ -466,12 +467,12 @@
             if (!code) return;
 
             if (currentAccion === "INYECCIÓN") {
-                if (!/^\d{10}$/.test(code)) {
-                    showStatus(true, "ERR: DEBE SER 10 NÚMEROS");
+                if (!/^\d{8}$/.test(code)) {
+                    showStatus(true, "ERR: DEBE SER 8 NÚMEROS");
                     return;
                 }
             } else {
-                if (code.length < 5) return;
+                if (code.length === 0) return;
             }
 
             const dateKey = `${new Date().getDate()}/${new Date().getMonth()+1}/${new Date().getFullYear()}`;
