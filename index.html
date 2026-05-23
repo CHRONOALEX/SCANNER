@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SCANNER V3 - HANDHELD OPTIMIZED</title>
+    <title>SCANNER V3 - ULTRA FAST SPEED</title>
     <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --primary: #8a2929;
@@ -18,7 +19,8 @@
             --white: #ffffff;
             --rombo-color: #00d4ff;
             --qp-color: #ff4444;
-            --emissary-color: #a855f7; /* Morado para Emissary */
+            --emissary-color: #a855f7; 
+            --otro-color: #10b981;
         }
 
         body { 
@@ -78,6 +80,12 @@
 
         .select-group {
             display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .select-row {
+            display: flex;
             gap: 5px;
         }
 
@@ -90,10 +98,9 @@
             font-family: 'Lexend', sans-serif;
             font-size: 0.85rem;
             outline: none;
+            flex: 1;
+            width: 50%;
         }
-
-        #prov-select { flex: 0 0 35%; } 
-        #list-select { flex: 1; }
 
         #scanner-input {
             background: #000000;
@@ -117,7 +124,7 @@
             border-radius: 8px;
             border: 1px solid var(--carbon-border);
             overflow: hidden;
-            max-height: 50vh;
+            max-height: 45vh;
             overflow-y: auto;
         }
 
@@ -132,16 +139,17 @@
         }
 
         table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; padding: 8px 12px; font-size: 0.65em; color: var(--text-dim); border-bottom: 1px solid var(--carbon-border); }
-        td { padding: 8px 12px; border-bottom: 1px solid #1a1a1a; font-size: 0.85em; }
+        th { text-align: left; padding: 6px 4px; font-size: 0.60em; color: var(--text-dim); border-bottom: 1px solid var(--carbon-border); }
+        td { padding: 6px 4px; border-bottom: 1px solid #1a1a1a; font-size: 0.74em; vertical-align: middle; }
         
         .guia-text { font-weight: 600; color: var(--white); }
-        .badge-prov { font-size: 0.7em; padding: 1px 6px; border-radius: 3px; font-weight: bold; }
+        .badge-prov { font-size: 0.75em; padding: 2px 4px; border-radius: 3px; font-weight: bold; display: inline-block; }
+        .badge-type { font-size: 0.75em; padding: 2px 4px; border-radius: 3px; background: #333; color: #fff; display: inline-block; }
         
-        /* Estilos específicos por proveedor */
         .badge-rombo { color: var(--rombo-color); }
         .badge-qp { color: var(--qp-color); }
         .badge-emissary { color: var(--white); background: var(--emissary-color); }
+        .badge-otro { color: var(--white); background: var(--otro-color); }
 
         #error-toast {
             display: none; position: fixed; top: 15%; left: 50%; transform: translateX(-50%);
@@ -155,6 +163,68 @@
             flex-direction: column; align-items: center; justify-content: center;
         }
         #reader { width: 90%; border-radius: 10px; border: 1px solid var(--carbon-border); }
+
+        .filter-card {
+            background: var(--carbon-light);
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid var(--carbon-border);
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .filter-card select {
+            font-size: 0.75rem;
+            padding: 5px;
+        }
+
+        /* Contenedor del gráfico donut */
+        .chart-container {
+            position: relative;
+            margin: 10px auto;
+            height: 250px;
+            width: 250px;
+            background: var(--carbon-light);
+            border-radius: 8px;
+            padding: 10px;
+            border: 1px solid var(--carbon-border);
+        }
+
+        /* Lista de conteo detallado al lado de la descripción */
+        .chart-legend-list {
+            background: var(--carbon-light);
+            border: 1px solid var(--carbon-border);
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .legend-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .legend-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .legend-color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .legend-badge {
+            background: #000000;
+            color: var(--white);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            border: 1px solid var(--carbon-border);
+        }
     </style>
 </head>
 <body>
@@ -164,29 +234,37 @@
     <nav>
         <button onclick="showView('scanner-view')" id="nav-scanner" class="active">ESCÁNER</button>
         <button onclick="showView('report-view')" id="nav-report">HISTORIAL</button>
+        <button onclick="showView('chart-view')" id="nav-chart">ESTADÍSTICAS</button>
     </nav>
 
     <div class="container">
         <div id="scanner-view" class="view active">
             <div class="scan-card">
                 <div class="select-group">
-                    <select id="prov-select" onchange="selectProv(this.value)">
-                        <option value="Rombo">Rombo</option>
-                        <option value="QP">QP</option>
-                        <option value="Emissary">Emissary</option>
-                    </select>
+                    <div class="select-row">
+                        <select id="prov-select" onchange="selectProv(this.value)">
+                            <option value="ROMBO">ROMBO</option>
+                            <option value="QP">QP</option>
+                            <option value="EMISSARY">EMISSARY</option>
+                            <option value="OTRO">OTRO</option>
+                        </select>
 
-                    <select id="list-select" onchange="selectList(this.value)">
-                        <option value="Inyección NextDay">Iny. NextDay</option>
-                        <option value="Inyección NextDay MP">Iny. NextDay MP</option>
-                        <option value="Inyección SameDay">Iny. SameDay</option>
-                        <option value="Sin Contenido">Sin Contenido</option>
-                        <option value="Paquete Dañado">Paquete Dañado</option>
-                        <option value="Mal Entregado">Mal Entregado</option>
-                        <option value="Fuera de Cobertura">Cobertura</option>
-                        <option value="Devolución a Origen / 3 Intentos">Devolución</option>
-                        <option value="No Manifestado(Rojo) / TBM">No Manifestado</option>
-                    </select>
+                        <select id="type-select" onchange="selectType(this.value)">
+                            <option value="NO EMBARCADO TR2">NO EMBARCADO TR2</option>
+                            <option value="DEVOLUCIÓN">DEVOLUCIÓN</option>
+                            <option value="PAQUETES ROJOS NM">PAQUETES ROJOS NM</option>
+                        </select>
+                    </div>
+
+                    <div class="select-row">
+                        <select id="accion-select" onchange="selectAccion(this.value)">
+                            <option value="INYECCIÓN">INYECCIÓN</option>
+                            <option value="DEVOLUCIÓN A ORIGEN">DEVOLUCIÓN A ORIGEN</option>
+                        </select>
+
+                        <select id="categoria-select" onchange="selectCategoria(this.value)">
+                        </select>
+                    </div>
                 </div>
 
                 <div style="display: flex; gap: 5px;">
@@ -200,21 +278,112 @@
                     <span id="list-title" style="font-weight:600; font-size:0.8em;">Lista Actual</span>
                     <span id="count-per-list" style="background:var(--primary); padding:2px 6px; border-radius:8px; font-size:0.7em;">0</span>
                 </div>
-                <table><tbody id="scanned-list-body"></tbody></table>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>GUÍA</th>
+                            <th>ACCIÓN</th>
+                            <th>CATEGORÍA</th>
+                            <th>PROVEEDOR</th>
+                            <th>TIPO</th>
+                            <th style="text-align:right">ACC</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scanned-list-body"></tbody>
+                </table>
             </div>
         </div>
 
         <div id="report-view" class="view">
-            <div style="display: flex; justify-content: flex-end; margin-bottom: 5px;">
-                <button class="btn-copy" onclick="copyToSheets()" style="padding: 10px; font-size: 0.7rem;">📋 COPIAR DATOS</button>
+            <div class="filter-card">
+                <span style="font-size:0.7rem; font-weight:600; color:var(--accent);">FILTRAR COLUMNAS:</span>
+                <div class="select-row">
+                    <select id="filter-accion" onchange="renderReport()">
+                        <option value="TODOS">ACCIÓN (TODOS)</option>
+                        <option value="INYECCIÓN">INYECCIÓN</option>
+                        <option value="DEVOLUCIÓN A ORIGEN">DEVOLUCIÓN A ORIGEN</option>
+                    </select>
+                    <select id="filter-categoria" onchange="renderReport()">
+                        <option value="TODOS">CATEGORÍA (TODOS)</option>
+                        <option value="NO MANIFESTADO">NO MANIFESTADO</option>
+                        <option value="MAL PUNTEADO">MAL PUNTEADO</option>
+                        <option value="ANDEN INCORRECTO">ANDEN INCORRECTO</option>
+                        <option value="SIN CONTENIDO">SIN CONTENIDO</option>
+                        <option value="PAQUETE DAÑADO">PAQUETE DAÑADO</option>
+                        <option value="EXCESO DE DIMENSIONES">EXCESO DE DIMENSIONES</option>
+                        <option value="FUERA DE COBERTURA">FUERA DE COBERTURA</option>
+                        <option value="3 INTENTOS">3 INTENTOS</option>
+                        <option value="MAL ENTREGADO">MAL ENTREGADO</option>
+                    </select>
+                </div>
+                <div class="select-row">
+                    <select id="filter-prov" onchange="renderReport()">
+                        <option value="TODOS">PROVEEDOR (TODOS)</option>
+                        <option value="ROMBO">ROMBO</option>
+                        <option value="QP">QP</option>
+                        <option value="EMISSARY">EMISSARY</option>
+                        <option value="OTRO">OTRO</option>
+                    </select>
+                    <select id="filter-type" onchange="renderReport()">
+                        <option value="TODOS">TIPO (TODOS)</option>
+                        <option value="NO EMBARCADO TR2">NO EMBARCADO TR2</option>
+                        <option value="DEVOLUCIÓN">DEVOLUCIÓN</option>
+                        <option value="PAQUETES ROJOS NM">PAQUETES ROJOS NM</option>
+                    </select>
+                </div>
             </div>
+
+            <div style="display: flex; justify-content: flex-end; margin-top: 2px; margin-bottom: 2px;">
+                <button class="btn-copy" onclick="copyToSheets()" style="padding: 10px; font-size: 0.7rem; background: var(--primary); color:white; border:none; border-radius:6px; font-weight:600; cursor:pointer;">📋 COPIAR DATOS</button>
+            </div>
+            
             <div class="list-section">
                 <table>
-                    <thead><tr><th>Guía</th><th>Serv.</th><th>Prov.</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th>GUÍA</th>
+                            <th>ACCIÓN / CAT.</th>
+                            <th>PROV / TIPO</th>
+                        </tr>
+                    </thead>
                     <tbody id="report-table-body"></tbody>
                 </table>
             </div>
-            <button onclick="resetAllData()" style="padding:12px; background:transparent; color:#8a2929; border:1px solid #8a2929; border-radius:8px; font-weight:bold; margin-top:10px; width: 100%; font-size: 0.8rem;">BORRAR TODO</button>
+            <button onclick="resetAllData()" style="padding:12px; background:transparent; color:#8a2929; border:1px solid #8a2929; border-radius:8px; font-weight:bold; margin-top:10px; width: 100%; font-size: 0.8rem; cursor:pointer;">BORRAR TODO</button>
+        </div>
+
+        <div id="chart-view" class="view">
+            <div style="text-align: center; margin-top: 5px;">
+                <h3 style="margin: 5px 0; font-size: 1rem; color: var(--accent);">Estadísticas por Tipo</h3>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="donutChart"></canvas>
+            </div>
+
+            <div class="chart-legend-list">
+                <div class="legend-item">
+                    <div class="legend-label">
+                        <div class="legend-color-dot" style="background: #00d4ff;"></div>
+                        <span style="color: var(--text-main);">NO EMBARCADO TR2</span>
+                    </div>
+                    <span id="badge-tr2" class="legend-badge">0</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-label">
+                        <div class="legend-color-dot" style="background: #ff4444;"></div>
+                        <span style="color: var(--text-main);">DEVOLUCIÓN</span>
+                    </div>
+                    <span id="badge-dev" class="legend-badge">0</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-label">
+                        <div class="legend-color-dot" style="background: #a855f7;"></div>
+                        <span style="color: var(--text-main);">PAQUETES ROJOS NM</span>
+                    </div>
+                    <span id="badge-rojos" class="legend-badge">0</span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -224,11 +393,20 @@
     </div>
 
     <script>
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwOQJJ6bVevCWg58OhjCjJpjbgn-0LHyvOPM84qDdcHLfuM3Gq9Mcmk-3C-ISt2FE8zyw/exec";
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwe_BKXr_8RhH2TT6vPg-WJGu8ZJpa0-xrDBvFSYba65b82cYzDqFuNwwqLUiCw0HTqDQ/exec";
+        
+        const categoriasPorAccion = {
+            "INYECCIÓN": ["NO MANIFESTADO", "MAL PUNTEADO", "ANDEN INCORRECTO"],
+            "DEVOLUCIÓN A ORIGEN": ["NO MANIFESTADO", "MAL PUNTEADO", "SIN CONTENIDO", "PAQUETE DAÑADO", "EXCESO DE DIMENSIONES", "FUERA DE COBERTURA", "3 INTENTOS", "MAL ENTREGADO"]
+        };
+
         let inventory = JSON.parse(localStorage.getItem('redpack_v5')) || {}; 
-        let currentListName = localStorage.getItem('redpack_last_list') || 'Inyección NextDay';
-        let currentProv = localStorage.getItem('redpack_last_prov') || 'Rombo';
+        let currentProv = localStorage.getItem('redpack_last_prov') || 'ROMBO';
+        let currentType = localStorage.getItem('redpack_last_type') || 'NO EMBARCADO TR2';
+        let currentAccion = localStorage.getItem('redpack_last_accion') || 'INYECCIÓN';
+        let currentCategoria = localStorage.getItem('redpack_last_categoria') || 'NO MANIFESTADO';
         let html5QrCode;
+        let myChart = null; 
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         
@@ -241,7 +419,6 @@
                 gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
                 osc.start(); osc.stop(audioCtx.currentTime + 0.1);
             } else {
-                // Sonido de error más potente y largo para Handheld
                 osc.type = 'sawtooth';
                 osc.frequency.setValueAtTime(100, audioCtx.currentTime);
                 osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.4);
@@ -264,10 +441,23 @@
                 }, 1500);
             } else {
                 document.body.classList.add('scan-success');
-                // Vibración para éxito (si el hardware lo permite)
                 if (navigator.vibrate) navigator.vibrate(60);
                 playBeep('success');
                 setTimeout(() => document.body.classList.remove('scan-success'), 200);
+            }
+        }
+
+        function actualizarSelectorCategorias(mantenerSeleccion = false) {
+            const selectCat = document.getElementById('categoria-select');
+            const opciones = categoriasPorAccion[currentAccion] || [];
+            selectCat.innerHTML = opciones.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+            
+            if (mantenerSeleccion && opciones.includes(currentCategoria)) {
+                selectCat.value = currentCategoria;
+            } else {
+                currentCategoria = opciones[0] || '';
+                localStorage.setItem('redpack_last_categoria', currentCategoria);
+                selectCat.value = currentCategoria;
             }
         }
 
@@ -275,34 +465,57 @@
             code = code.trim();
             if (!code) return;
 
-            if (currentListName.toLowerCase().includes("inyección")) {
-                if (!/^\d+$/.test(code) || code.length < 8 || code.length > 10) {
-                    showStatus(true, "ERR: SOLO 8-10 NÚMEROS");
+            if (currentAccion === "INYECCIÓN") {
+                if (!/^\d{10}$/.test(code)) {
+                    showStatus(true, "ERR: DEBE SER 10 NÚMEROS");
                     return;
                 }
-            } else if (code.length < 8) return;
+            } else {
+                if (code.length < 5) return;
+            }
 
             const dateKey = `${new Date().getDate()}/${new Date().getMonth()+1}/${new Date().getFullYear()}`;
             if (!inventory[dateKey]) inventory[dateKey] = {};
             
+            const listKey = `${currentAccion} - ${currentCategoria}`;
+
             for (let L in inventory[dateKey]) {
                 if (inventory[dateKey][L].some(i => i.guia === code)) {
-                    showStatus(true, "YA ESCANEADO EN " + L);
+                    showStatus(true, "DUPLICADO EN: " + L);
                     return;
                 }
             }
 
-            if (!inventory[dateKey][currentListName]) inventory[dateKey][currentListName] = [];
-            inventory[dateKey][currentListName].push({ guia: code, prov: currentProv });
+            if (!inventory[dateKey][listKey]) inventory[dateKey][listKey] = [];
+            
+            inventory[dateKey][listKey].push({ 
+                guia: code, 
+                prov: currentProv, 
+                tipo: currentType,
+                accion: currentAccion,
+                categoria: currentCategoria
+            });
+            
             localStorage.setItem('redpack_v5', JSON.stringify(inventory));
             
             showStatus(false);
             updateUI();
 
-            fetch(WEB_APP_URL, {
-                method: "POST", mode: "no-cors",
-                body: JSON.stringify({ fecha: dateKey, guia: code, servicio: currentListName, proveedor: currentProv })
+            const datosParaEnvio = new URLSearchParams({
+                fecha: dateKey,
+                guia: code,
+                accion: currentAccion,
+                categoria: currentCategoria,
+                proveedor: currentProv,
+                tipo: currentType
             });
+
+            fetch(WEB_APP_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: datosParaEnvio.toString()
+            }).catch(err => console.log("Guardado local asegurado, reintentando red..."));
         }
 
         document.addEventListener('keydown', (e) => {
@@ -321,38 +534,148 @@
         function updateUI() {
             const dateKey = `${new Date().getDate()}/${new Date().getMonth()+1}/${new Date().getFullYear()}`;
             const dayData = inventory[dateKey] || {};
-            const list = dayData[currentListName] || [];
+            const listKey = `${currentAccion} - ${currentCategoria}`;
+            const list = dayData[listKey] || [];
             
-            document.getElementById('list-title').textContent = currentListName;
+            document.getElementById('list-title').textContent = `${currentAccion} (${currentCategoria})`;
             document.getElementById('count-per-list').textContent = list.length;
+            
             document.getElementById('prov-select').value = currentProv;
-            document.getElementById('list-select').value = currentListName;
+            document.getElementById('type-select').value = currentType;
+            document.getElementById('accion-select').value = currentAccion;
             
             document.getElementById('scanned-list-body').innerHTML = list.slice(-8).map(i => {
                 let badgeClass = 'badge-rombo';
                 if(i.prov === 'QP') badgeClass = 'badge-qp';
-                if(i.prov === 'Emissary') badgeClass = 'badge-emissary';
+                if(i.prov === 'EMISSARY') badgeClass = 'badge-emissary';
+                if(i.prov === 'OTRO') badgeClass = 'badge-otro';
 
                 return `
                 <tr>
-                    <td><span class="guia-text">${i.guia}</span> <span class="badge-prov ${badgeClass}">${i.prov}</span></td>
-                    <td style="text-align:right"><button onclick="deleteItem('${i.guia}')" style="color:#8a2929; background:none; border:none; font-weight:bold;">✕</button></td>
+                    <td><span class="guia-text">${i.guia}</span></td>
+                    <td><span style="color:#ffffff; font-size:0.85em; font-weight:600;">${i.accion}</span></td>
+                    <td><span style="color:var(--accent); font-size:0.85em;">${i.categoria}</span></td>
+                    <td><span class="badge-prov ${badgeClass}">${i.prov}</span></td>
+                    <td><span class="badge-type">${i.tipo}</span></td>
+                    <td style="text-align:right">
+                        <button onclick="deleteItem('${i.guia}')" style="color:#8a2929; background:none; border:none; font-weight:bold; font-size:1.1rem; cursor:pointer;">✕</button>
+                    </td>
                 </tr>`;
             }).reverse().join('');
             
             renderReport();
+            updateChart(); 
         }
 
         function renderReport() {
             const dateKey = `${new Date().getDate()}/${new Date().getMonth()+1}/${new Date().getFullYear()}`;
             const dayData = inventory[dateKey] || {};
+            
+            const fAccion = document.getElementById('filter-accion').value;
+            const fCategoria = document.getElementById('filter-categoria').value;
+            const fProv = document.getElementById('filter-prov').value;
+            const fType = document.getElementById('filter-type').value;
+
             let rows = [];
             for (let L in dayData) {
                 dayData[L].forEach(i => {
-                    rows.push(`<tr><td class="guia-text">${i.guia}</td><td style="font-size:0.7em">${L}</td><td style="font-size:0.7em">${i.prov}</td></tr>`);
+                    if (fAccion !== "TODOS" && i.accion !== fAccion) return;
+                    if (fCategoria !== "TODOS" && i.categoria !== fCategoria) return;
+                    if (fProv !== "TODOS" && i.prov !== fProv) return;
+                    if (fType !== "TODOS" && i.tipo !== fType) return;
+
+                    rows.push(`<tr>
+                        <td class="guia-text">${i.guia}</td>
+                        <td style="font-size:0.7em">${i.accion}<br><span style="color:var(--accent)">${i.categoria}</span></td>
+                        <td style="font-size:0.7em">${i.prov}<br>${i.tipo}</td>
+                    </tr>`);
                 });
             }
             document.getElementById('report-table-body').innerHTML = rows.reverse().join('');
+        }
+
+        function updateChart() {
+            const dateKey = `${new Date().getDate()}/${new Date().getMonth()+1}/${new Date().getFullYear()}`;
+            const dayData = inventory[dateKey] || {};
+            
+            let totalGuias = 0;
+            let countTr2 = 0;
+            let countDev = 0;
+            let countRojos = 0;
+
+            for (let L in dayData) {
+                dayData[L].forEach(i => {
+                    totalGuias++;
+                    if (i.tipo === "NO EMBARCADO TR2") countTr2++;
+                    else if (i.tipo === "DEVOLUCIÓN") countDev++;
+                    else if (i.tipo === "PAQUETES ROJOS NM") countRojos++;
+                });
+            }
+
+            // Inyección de texto en las etiquetas descriptivas inferiores
+            document.getElementById('badge-tr2').textContent = countTr2;
+            document.getElementById('badge-dev').textContent = countDev;
+            document.getElementById('badge-rojos').textContent = countRojos;
+
+            const ctx = document.getElementById('donutChart').getContext('2d');
+            
+            if (myChart) {
+                myChart.data.datasets[0].data = [countTr2, countDev, countRojos];
+                myChart.options.plugins.centerText.text = totalGuias.toString();
+                myChart.update();
+            } else {
+                // Plugin con centrado matemático perfecto
+                const centerTextPlugin = {
+                    id: 'centerText',
+                    beforeDraw: function(chart) {
+                        var width = chart.width,
+                            height = chart.height,
+                            ctx = chart.ctx;
+                        ctx.restore();
+                        
+                        // Adaptación perfecta del tamaño según dimensiones del contenedor
+                        var fontSize = (height / 100).toFixed(2);
+                        ctx.font = "bold " + fontSize + "em Lexend, sans-serif";
+                        ctx.textBaseline = "middle";
+                        ctx.textAlign = "center";
+                        ctx.fillStyle = "#ffffff";
+                        
+                        var text = chart.options.plugins.centerText.text || "0";
+                        var textX = width / 2;
+                        var textY = height / 2;
+                        
+                        ctx.fillText(text, textX, textY);
+                        ctx.save();
+                    }
+                };
+
+                myChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['NO EMBARCADO TR2', 'DEVOLUCIÓN', 'PAQUETES ROJOS NM'],
+                        datasets: [{
+                            data: [countTr2, countDev, countRojos],
+                            backgroundColor: ['#00d4ff', '#ff4444', '#a855f7'],
+                            borderColor: '#1e1e1e',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '75%', 
+                        plugins: {
+                            legend: {
+                                display: false // Se oculta la leyenda nativa para usar la lista personalizada limpia
+                            },
+                            centerText: {
+                                text: totalGuias.toString()
+                            }
+                        }
+                    },
+                    plugins: [centerTextPlugin]
+                });
+            }
         }
 
         function copyToSheets() {
@@ -360,18 +683,29 @@
             const dayData = inventory[dateKey] || {};
             let tsv = "";
             for (let L in dayData) {
-                dayData[L].forEach(i => { tsv += `${dateKey}\t${i.guia}\t${L}\t${i.prov}\n`; });
+                dayData[L].forEach(i => { 
+                    tsv += `${dateKey}\t${i.guia}\t${i.accion}\t${i.categoria}\t${i.prov}\t${i.tipo}\n`; 
+                });
             }
-            if (tsv) navigator.clipboard.writeText(tsv).then(() => alert("Copiado"));
+            if (tsv) navigator.clipboard.writeText(tsv).then(() => alert("¡Datos copiados!"));
         }
 
         function selectProv(n) { currentProv = n; localStorage.setItem('redpack_last_prov', n); }
-        function selectList(n) { currentListName = n; localStorage.setItem('redpack_last_list', n); updateUI(); }
+        function selectType(n) { currentType = n; localStorage.setItem('redpack_last_type', n); }
+        function selectAccion(n) { 
+            currentAccion = n; 
+            localStorage.setItem('redpack_last_accion', n); 
+            actualizarSelectorCategorias(false); 
+            updateUI(); 
+        }
+        function selectCategoria(n) { currentCategoria = n; localStorage.setItem('redpack_last_categoria', n); updateUI(); }
 
         function deleteItem(code) {
             const dateKey = `${new Date().getDate()}/${new Date().getMonth()+1}/${new Date().getFullYear()}`;
             if (inventory[dateKey]) {
-                for (let L in inventory[dateKey]) { inventory[dateKey][L] = inventory[dateKey][L].filter(i => i.guia !== code); }
+                for (let L in inventory[dateKey]) { 
+                    inventory[dateKey][L] = inventory[dateKey][L].filter(i => i.guia !== code); 
+                }
             }
             localStorage.setItem('redpack_v5', JSON.stringify(inventory));
             updateUI();
@@ -390,11 +724,19 @@
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
             document.getElementById(id).classList.add('active');
             document.getElementById('nav-' + id.split('-')[0]).classList.add('active');
+            
+            if(id === 'chart-view') {
+                updateChart();
+            }
         }
 
         function resetAllData() { if(confirm("¿Borrar todo?")) { inventory = {}; localStorage.setItem('redpack_v5', JSON.stringify(inventory)); updateUI(); } }
 
-        window.onload = () => { updateUI(); document.getElementById('scanner-input').focus(); };
+        window.onload = () => { 
+            actualizarSelectorCategorias(true);
+            updateUI(); 
+            document.getElementById('scanner-input').focus(); 
+        };
     </script>
 </body>
 </html>
