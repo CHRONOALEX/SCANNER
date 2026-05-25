@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SCANNER V3 - ULTRA FAST SPEED</title>
+    <title>SCANNER V4 - RK</title>
     <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -315,6 +315,10 @@
                         <option value="FUERA DE COBERTURA">FUERA DE COBERTURA</option>
                         <option value="3 INTENTOS">3 INTENTOS</option>
                         <option value="MAL ENTREGADO">MAL ENTREGADO</option>
+                        <option value="NEGOCIO CERRADO">NEGOCIO CERRADO</option>
+                        <option value="MAL ETIQUETADO">MAL ETIQUETADO</option>
+                        <option value="DOMICILIO INCORRECTO">DOMICILIO INCORRECTO</option>
+                        <option value="RECHAZO">RECHAZO</option>
                     </select>
                 </div>
                 <div class="select-row">
@@ -397,8 +401,8 @@
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwe_BKXr_8RhH2TT6vPg-WJGu8ZJpa0-xrDBvFSYba65b82cYzDqFuNwwqLUiCw0HTqDQ/exec";
         
         const categoriasPorAccion = {
-            "INYECCIÓN": ["NO MANIFESTADO", "MAL PUNTEADO", "ANDEN INCORRECTO", "REINTENTO"],
-            "DEVOLUCIÓN A ORIGEN": ["NO MANIFESTADO", "MAL PUNTEADO", "SIN CONTENIDO", "PAQUETE DAÑADO", "EXCESO DE DIMENSIONES", "FUERA DE COBERTURA", "3 INTENTOS", "MAL ENTREGADO"]
+            "INYECCIÓN": ["NO MANIFESTADO", "MAL PUNTEADO", "ANDEN INCORRECTO", "REINTENTO", "NEGOCIO CERRADO", "MAL ETIQUETADO"],
+            "DEVOLUCIÓN A ORIGEN": ["NO MANIFESTADO", "MAL PUNTEADO", "SIN CONTENIDO", "PAQUETE DAÑADO", "EXCESO DE DIMENSIONES", "FUERA DE COBERTURA", "3 INTENTOS", "MAL ENTREGADO", "NEGOCIO CERRADO", "MAL ETIQUETADO", "DOMICILIO INCORRECTO", "RECHAZO"]
         };
 
         let inventory = JSON.parse(localStorage.getItem('redpack_v5')) || {}; 
