@@ -178,7 +178,6 @@
             padding: 5px;
         }
 
-        /* Contenedor del gráfico donut */
         .chart-container {
             position: relative;
             margin: 10px auto;
@@ -190,7 +189,6 @@
             border: 1px solid var(--carbon-border);
         }
 
-        /* Lista de conteo detallado al lado de la descripción */
         .chart-legend-list {
             background: var(--carbon-light);
             border: 1px solid var(--carbon-border);
@@ -224,6 +222,33 @@
             border-radius: 12px;
             font-size: 0.75rem;
             border: 1px solid var(--carbon-border);
+        }
+
+        /* Estilos de Sincronización Nuevos */
+        .sync-status {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .sync-true { background-color: #10b981; }
+        .sync-false { background-color: #ff4444; }
+        
+        .btn-sync-row {
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 0.65rem;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: 'Lexend', sans-serif;
+        }
+        .btn-sync-row:disabled {
+            background: #333333;
+            color: #777777;
+            cursor: not-allowed;
         }
     </style>
 </head>
@@ -338,7 +363,8 @@
                 </div>
             </div>
 
-            <div style="display: flex; justify-content: flex-end; margin-top: 2px; margin-bottom: 2px;">
+            <div style="display: flex; justify-content: flex-end; margin-top: 4px; margin-bottom: 2px; gap: 5px;">
+                <button id="btn-sync-pending" class="btn-copy" onclick="syncPendingGuides()" style="padding: 10px; font-size: 0.7rem; background: #10b981; color:white; border:none; border-radius:6px; font-weight:600; cursor:pointer;">☁️ SINCRO PENDIENTES</button>
                 <button class="btn-copy" onclick="copyToSheets()" style="padding: 10px; font-size: 0.7rem; background: var(--primary); color:white; border:none; border-radius:6px; font-weight:600; cursor:pointer;">📋 COPIAR DATOS</button>
             </div>
             
@@ -349,6 +375,7 @@
                             <th>GUÍA</th>
                             <th>ACCIÓN / CAT.</th>
                             <th>PROV / TIPO</th>
+                            <th style="text-align:right; width: 45px;">NUBE</th>
                         </tr>
                     </thead>
                     <tbody id="report-table-body"></tbody>
@@ -493,26 +520,33 @@
 
             if (!inventory[dateKey][listKey]) inventory[dateKey][listKey] = [];
             
-            inventory[dateKey][listKey].push({ 
+            const newItem = { 
                 guia: code, 
                 prov: currentProv, 
                 tipo: currentType,
                 accion: currentAccion,
-                categoria: currentCategoria
-            });
-            
+                categoria: currentCategoria,
+                sync: false // Bandera de estado por defecto
+            };
+
+            inventory[dateKey][listKey].push(newItem);
             localStorage.setItem('redpack_v5', JSON.stringify(inventory));
             
             showStatus(false);
             updateUI();
 
+            // Intento de envío inmediato asíncrono en segundo plano
+            sendToSheetsBackground(dateKey, listKey, code, newItem);
+        }
+
+        function sendToSheetsBackground(dateKey, listKey, code, itemData) {
             const datosParaEnvio = new URLSearchParams({
                 fecha: dateKey,
                 guia: code,
-                accion: currentAccion,
-                categoria: currentCategoria,
-                proveedor: currentProv,
-                tipo: currentType
+                accion: itemData.accion,
+                categoria: itemData.categoria,
+                proveedor: itemData.prov,
+                tipo: itemData.tipo
             });
 
             fetch(WEB_APP_URL, {
@@ -520,7 +554,126 @@
                 mode: "no-cors",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 body: datosParaEnvio.toString()
-            }).catch(err => console.log("Guardado local asegurado, reintentando red..."));
+            })
+            .then(() => {
+                // Si se envía correctamente en red cambiamos la bandera a true
+                marcarGuiaComoSincronizada(dateKey, code);
+            })
+            .catch(err => console.log("Guardado local asegurado, listo para sync manual posterior..."));
+        }
+
+        function marcarGuiaComoSincronizada(dateKey, code) {
+            if (inventory[dateKey]) {
+                for (let L in inventory[dateKey]) {
+                    let index = inventory[dateKey][L].findIndex(i => i.guia === code);
+                    if (index !== -1) {
+                        inventory[dateKey][L][index].sync = true;
+                        break;
+                    }
+                }
+                localStorage.setItem('redpack_v5', JSON.stringify(inventory));
+                // Refrescamos vistas sin reiniciar flujos de enfoque
+                renderReport();
+            }
+        }
+
+        // Nueva función dedicada para procesar exclusivamente guías con sync: false de forma masiva
+        async function syncPendingGuides() {
+            const btn = document.getElementById('btn-sync-pending');
+            const dateKey = `${new Date().getDate()}/${new Date().getMonth()+1}/${new Date().getFullYear()}`;
+            const dayData = inventory[dateKey] || {};
+            
+            let pendientes = [];
+            
+            for (let L in dayData) {
+                dayData[L].forEach(item => {
+                    if (item.sync === false || !item.hasOwnProperty('sync')) {
+                        pendientes.push({ listKey: L, data: item });
+                    }
+                });
+            }
+
+            if (pendientes.length === 0) {
+                alert("Todas las guías de hoy ya se encuentran sincronizadas.");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = `⏳ ENVIANDO (${pendientes.length})...`;
+
+            // Ejecución secuencial rápida para evitar pérdida de datos/concurrencia
+            for (let p of pendientes) {
+                const datosParaEnvio = new URLSearchParams({
+                    fecha: dateKey,
+                    guia: p.data.guia,
+                    accion: p.data.accion,
+                    categoria: p.data.categoria,
+                    proveedor: p.data.prov,
+                    tipo: p.data.tipo
+                });
+
+                try {
+                    await fetch(WEB_APP_URL, {
+                        method: "POST",
+                        mode: "no-cors",
+                        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                        body: datosParaEnvio.toString()
+                    });
+                    
+                    // Actualización en caliente por cada iteración exitosa
+                    let index = inventory[dateKey][p.listKey].findIndex(i => i.guia === p.data.guia);
+                    if (index !== -1) {
+                        inventory[dateKey][p.listKey][index].sync = true;
+                    }
+                } catch (e) {
+                    console.error("Fallo de red temporal al sincronizar la guía: " + p.data.guia);
+                }
+            }
+
+            localStorage.setItem('redpack_v5', JSON.stringify(inventory));
+            renderReport();
+            btn.disabled = false;
+            btn.textContent = "☁️ SINCRO PENDIENTES";
+            alert("¡Proceso de sincronización completado!");
+        }
+
+        // Función para subir de manera individual desde la misma celda de la tabla
+        function syncSingleGuide(dateKey, listKey, code) {
+            if (!inventory[dateKey] || !inventory[dateKey][listKey]) return;
+            const item = inventory[dateKey][listKey].find(i => i.guia === code);
+            if (!item) return;
+
+            const targetBtn = document.getElementById(`btn-sync-${code}`);
+            if (targetBtn) {
+                targetBtn.disabled = true;
+                targetBtn.textContent = "⏳...";
+            }
+
+            const datosParaEnvio = new URLSearchParams({
+                fecha: dateKey,
+                guia: code,
+                accion: item.accion,
+                categoria: item.categoria,
+                proveedor: item.prov,
+                tipo: item.tipo
+            });
+
+            fetch(WEB_APP_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: datosParaEnvio.toString()
+            })
+            .then(() => {
+                marcarGuiaComoSincronizada(dateKey, code);
+            })
+            .catch(err => {
+                alert("Error de red. No se pudo conectar con Sheets.");
+                if (targetBtn) {
+                    targetBtn.disabled = false;
+                    targetBtn.textContent = "Reintentar";
+                }
+            });
         }
 
         document.addEventListener('keydown', (e) => {
@@ -589,10 +742,17 @@
                     if (fProv !== "TODOS" && i.prov !== fProv) return;
                     if (fType !== "TODOS" && i.tipo !== fType) return;
 
+                    // Manejo seguro por si no existe la propiedad sync aún
+                    const isSynced = i.hasOwnProperty('sync') ? i.sync : false;
+                    const syncIndicator = isSynced ? 
+                        '<span class="sync-status sync-true" title="Sincronizado"></span>' : 
+                        `<button id="btn-sync-${i.guia}" class="btn-sync-row" onclick="syncSingleGuide('${dateKey}','${L}','${i.guia}')">Subir</button>`;
+
                     rows.push(`<tr>
                         <td class="guia-text">${i.guia}</td>
                         <td style="font-size:0.7em">${i.accion}<br><span style="color:var(--accent)">${i.categoria}</span></td>
                         <td style="font-size:0.7em">${i.prov}<br>${i.tipo}</td>
+                        <td style="text-align:center; vertical-align:middle;">${syncIndicator}</td>
                     </tr>`);
                 });
             }
@@ -617,7 +777,6 @@
                 });
             }
 
-            // Inyección de texto en las etiquetas descriptivas inferiores
             document.getElementById('badge-tr2').textContent = countTr2;
             document.getElementById('badge-dev').textContent = countDev;
             document.getElementById('badge-rojos').textContent = countRojos;
@@ -629,7 +788,6 @@
                 myChart.options.plugins.centerText.text = totalGuias.toString();
                 myChart.update();
             } else {
-                // Plugin con centrado matemático perfecto
                 const centerTextPlugin = {
                     id: 'centerText',
                     beforeDraw: function(chart) {
@@ -638,7 +796,6 @@
                             ctx = chart.ctx;
                         ctx.restore();
                         
-                        // Adaptación perfecta del tamaño según dimensiones del contenedor
                         var fontSize = (height / 100).toFixed(2);
                         ctx.font = "bold " + fontSize + "em Lexend, sans-serif";
                         ctx.textBaseline = "middle";
@@ -671,7 +828,7 @@
                         cutout: '75%', 
                         plugins: {
                             legend: {
-                                display: false // Se oculta la leyenda nativa para usar la lista personalizada limpia
+                                display: false 
                             },
                             centerText: {
                                 text: totalGuias.toString()
